@@ -89,7 +89,7 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentStatus: {
         type: String,
-        enum: ['Pending', 'Paid', 'Partially Paid', 'Failed'],
+        enum: ['Pending', 'Paid', 'Partially Paid', 'Failed', 'Refunded'],
         default: 'Pending',
         required: true
     },
@@ -97,6 +97,10 @@ const bookingSchema = new mongoose.Schema(
         orderId: String,
         paymentId: String,
         signature: String,
+        refundDetails: {
+            refundId: String,
+            refundDate: Date,
+        }
     },
     bookingOTP: {
         type: String,
