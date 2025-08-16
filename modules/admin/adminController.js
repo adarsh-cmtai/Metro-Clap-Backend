@@ -12,6 +12,60 @@ const mongoose = require('mongoose');
 const Razorpay = require('razorpay');
 const aws = require('aws-sdk');
 
+async function sendRefundConfirmationSMS(customer, booking) {
+    const message = `Your booking ${booking.bookingId} has been cancelled. An amount of ₹${booking.amountPaid} has been refunded. It will reflect in your account within 5-7 business days.`;
+    
+    console.log("--- SIMULATED REFUND SMS SENT ---");
+    console.log(`To: ${customer.mobileNumber}`);
+    console.log(`Message: ${message}`);
+    console.log("---------------------------------");
+}
+
+const cancelAndRefundBooking = async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id).populate('customerId', 'mobileNumber');
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found.' });
+        }
+        if (booking.status === 'Cancelled') {
+            return res.status(400).json({ message: 'Booking is already cancelled.' });
+        }
+
+        if (booking.amountPaid > 0 && booking.paymentMethod === 'Online') {
+            if (!booking.paymentDetails?.paymentId) {
+                return res.status(400).json({ message: 'Payment ID not found. Cannot process refund automatically.' });
+            }
+
+            const razorpay = new Razorpay({
+                key_id: process.env.RAZORPAY_KEY_ID,
+                key_secret: process.env.RAZORPAY_KEY_SECRET
+            });
+
+            const refund = await razorpay.payments.refund(booking.paymentDetails.paymentId, {
+                amount: booking.amountPaid * 100,
+                speed: 'normal',
+                notes: { reason: 'Booking cancelled by admin.' }
+            });
+
+            booking.paymentStatus = 'Refunded';
+            booking.paymentDetails.refundDetails = {
+                refundId: refund.id,
+                refundDate: new Date()
+            };
+            
+            await sendRefundConfirmationSMS(booking.customerId, booking);
+        }
+
+        booking.status = 'Cancelled';
+        const updatedBooking = await booking.save();
+        res.json(updatedBooking);
+
+    } catch (error) {
+        console.error("Refund/Cancel Error:", error);
+        res.status(500).json({ message: 'Failed to cancel booking', error: error.message || error });
+    }
+};
+
 const getServiceImageUploadUrl = async (req, res) => {
     try {
         const s3 = new aws.S3({
@@ -972,4 +1026,5 @@ module.exports = {
     addAdminReplyToTicket,
     getPartnerDetails,
     getServiceImageUploadUrl,
+    cancelAndRefundBooking,
 };
