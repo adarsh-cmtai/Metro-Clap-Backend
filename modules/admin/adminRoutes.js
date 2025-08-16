@@ -18,6 +18,7 @@ const { getDashboardStats ,getPartners, getCustomers,
     addAdminReplyToTicket,
     getPartnerDetails,
     getServiceImageUploadUrl,
+    cancelAndRefundBooking,
 } = require('./adminController');
 const { protect, admin } = require('../../middleware/authMiddleware');
 
@@ -34,8 +35,9 @@ router.route('/services/:id').put(protect, admin, updateService).delete(protect,
 
 router.route('/categories').get(protect, admin, getCategories).post(protect, admin,createCategory);
 router.route('/categories/:id').put(protect, admin, updateCategory).delete(protect, admin, deleteCategory);
-router.get('/bookings', protect, admin, getBookings);
 
+router.put('/bookings/:id/cancel-refund', protect, admin, cancelAndRefundBooking);
+router.get('/bookings', protect, admin, getBookings);
 router.route('/reviews').get(protect, admin, getReviews);
 router.route('/reviews/:id').put(protect, admin, updateReviewStatus).delete(protect, admin, deleteReview);
 
